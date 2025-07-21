@@ -1,42 +1,40 @@
-# AIC8800 Linux Driver
+# AIC8800 Linux Driver for Kernel 6.14+
 
-This repository provides the source code for the AIC8800 Wi-Fi driver, modified to ensure compatibility with Linux kernels version 6.x and newer. The primary purpose of this fork is to address compilation errors caused by API changes in the kernel's `cfg80211` subsystem.
+This branch provides the source code for the AIC8800 Wi-Fi driver, specifically patched for compatibility with **Linux Kernel 6.14.x** and newer versions with a similar API structure.
 
 ## The Problem
 
-The official driver, often distributed as `aic8800fdrvpackage.deb`, fails to compile on recent Linux distributions (e.g., Ubuntu 24.04 with Kernel 6.11) due to breaking changes in the Linux kernel's `cfg80211` wireless subsystem API.
+The original driver fails to compile on Linux Kernel 6.14 (e.g., found in Ubuntu 24.04 updates) due to significant breaking changes in the kernel's wireless subsystem API.
 
-Users will typically encounter compilation errors similar to these:
-
+Compilation errors typically include:
 ```
-error: too many arguments to function ‘cfg80211_ch_switch_notify’
-...
-error: too many arguments to function ‘cfg80211_ch_switch_started_notify’
+error: incompatible pointer types in function assignments for 'set_monitor_channel'
+error: too few arguments to function ‘cfg80211_cac_event’
+error: expected ‘,’ or ‘;’ before ‘VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver’
 ```
-
-This occurs because the function signatures for these kernel APIs have changed, and the driver's source code has not been updated to reflect this.
+These errors arise because kernel function signatures have been updated, and obsolete macros have been removed.
 
 ## The Solution
 
-This repository provides the complete, patched driver source in a structure that can be directly built into a `.deb` package. The function calls in `AIC8800/drivers/aic8800/aic8800_fdrv/rwnx_main.c` have been modified to match the updated kernel APIs.
+The source code in this branch has been patched to address these specific issues. The key fixes are:
+-   Updated function signatures in `rwnx_main.c` and `rwnx_radar.c` to match the 6.14 kernel API.
+-   Removed the obsolete `MODULE_IMPORT_NS` macro.
+-   Corrected parameter types and counts in function calls to the `cfg80211` subsystem.
 
 ### Tested Environment
-*   **Kernel Version**: Successfully tested on `Linux Kernel 6.11.0-28-generic`
+*   **Kernel Version**: `6.14.0-24-generic`
 *   **Distribution**: Ubuntu 24.04 LTS
 *   **Target Chip**: AIC8800 (USB Wi-Fi Adapter)
-
-This patch should also work on other 6.x kernels that have the same updated `cfg80211` function signatures.
 
 ---
 
 ## Installation Guide
 
-The **recommended** way to install this patched driver is to build a `.deb` package directly from this repository. This ensures a clean installation and removal process through your system's package manager.
+The recommended installation method is to build a `.deb` package.
 
 ### Prerequisites
 
-First, ensure you have the necessary tools for building packages and kernel modules.
-
+Install the necessary build tools and kernel headers for your system.
 ```bash
 sudo apt update
 sudo apt install build-essential linux-headers-$(uname -r) git dpkg-deb
@@ -44,42 +42,33 @@ sudo apt install build-essential linux-headers-$(uname -r) git dpkg-deb
 
 ### Building and Installing the `.deb` Package
 
-1.  **Clone this repository:**
+1.  **Clone the repository and switch to this branch:**
     ```bash
     git clone https://github.com/hellofuxu/aic8800-linux-driver.git
+    cd aic8800-linux-driver
+    git checkout 6.14.0-24-generic
     ```
 
 2.  **Build the `.deb` package:**
-    This command takes the cloned directory (`aic8800-linux-driver`) and packages its contents into a `.deb` file. The command should be run from the parent directory where you cloned the repo.
+    Run this command from *outside* the `aic8800-linux-driver` directory.
     ```bash
+    cd ..
     dpkg-deb --build aic8800-linux-driver
     ```
-    After this step, a new file named `aic8800-linux-driver.deb` will be created.
+    This will create a new file named `aic8800-linux-driver.deb`.
 
 3.  **Install the package:**
-    You can now install the fixed driver using your newly created `.deb` file.
     ```bash
     sudo dpkg -i aic8800-linux-driver.deb
     ```
-    The driver should now be successfully compiled by the package's post-installation script and loaded automatically.
+    The driver will now be compiled and installed. Your Wi-Fi adapter should be recognized automatically. You may need to unplug and replug the adapter.
 
 ---
 
-## Alternative Method: Building from Source
+## Uninstallation
 
-For advanced users, or for environments where a `.deb` package is not suitable, it is possible to compile and install the driver directly from the source code provided in this repository.
-
-The necessary `Makefile`(s) are included in the source directories. You will need to inspect them to understand the specific build targets and the required manual installation process. This method is not recommended for most users as it bypasses the system's package management.
-
-## Troubleshooting
-
-*   **Secure Boot:** If your system has Secure Boot enabled, it may block the loading of this unsigned third-party kernel module. You may need to sign the module yourself or disable Secure Boot in your system's UEFI/BIOS settings.
-*   **Kernel Headers:** Ensure the `linux-headers-$(uname -r)` package is installed and perfectly matches your running kernel version. If you recently updated your kernel, reboot your machine before attempting to build the driver.
-
-## Disclaimer
-
-This is an unofficial community patch. It is provided "as is" without any warranty. The original driver and its source code belong to their respective copyright holders. Use at your own risk.
-
-## Contributing
-
-Feel free to open an issue if you encounter problems or submit a pull request if you have improvements to the patch.
+To remove the driver, simply use `dpkg` to uninstall the package:
+```bash
+sudo dpkg -r aic8800fdrvpackage
+```
+(The package name inside the `.deb` is `aic8800fdrvpackage`).

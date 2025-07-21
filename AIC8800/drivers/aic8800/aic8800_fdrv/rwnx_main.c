@@ -3844,6 +3844,7 @@ cfg80211_chandef_identical(const struct cfg80211_chan_def *chandef1,
 #endif
 
 static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
+                                             struct net_device *dev,
                                              struct cfg80211_chan_def *chandef)
 {
     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
@@ -3898,8 +3899,9 @@ static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
 }
 
 int rwnx_cfg80211_set_monitor_channel_(struct wiphy *wiphy,
+                                             struct net_device *dev, 
                                              struct cfg80211_chan_def *chandef){
-    return rwnx_cfg80211_set_monitor_channel(wiphy, chandef);
+    return rwnx_cfg80211_set_monitor_channel(wiphy, dev, chandef); 
 }
 
 
@@ -4375,7 +4377,7 @@ static int rwnx_cfg80211_get_channel(struct wiphy *wiphy,
     if (rwnx_vif->vif_index == rwnx_hw->monitor_vif)
     {
         //retrieve channel from firmware
-        rwnx_cfg80211_set_monitor_channel(wiphy, NULL);
+        rwnx_cfg80211_set_monitor_channel(wiphy, wdev->netdev, NULL);
     }
 
     //Check if channel context is valid
@@ -4552,14 +4554,14 @@ send_frame:
 /**
  * @start_radar_detection: Start radar detection in the driver.
  */
-static
-int rwnx_cfg80211_start_radar_detection(struct wiphy *wiphy,
-                                        struct net_device *dev,
-                                        struct cfg80211_chan_def *chandef
-                                    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
-                                        , u32 cac_time_ms
-                                    #endif
-                                        )
+static int rwnx_cfg80211_start_radar_detection(struct wiphy *wiphy,
+                                                    struct net_device *dev,
+                                                    struct cfg80211_chan_def *chandef
+                                                #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
+                                                    , u32 cac_time_ms
+                                                #endif
+                                                    , int link_id
+                                                    )
 {
     struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
     struct rwnx_vif *rwnx_vif = netdev_priv(dev);
@@ -5703,7 +5705,7 @@ static struct cfg80211_ops rwnx_cfg80211_ops = {
     .start_ap = rwnx_cfg80211_start_ap,
     .change_beacon = rwnx_cfg80211_change_beacon,
     .stop_ap = rwnx_cfg80211_stop_ap,
-    .set_monitor_channel = rwnx_cfg80211_set_monitor_channel,
+    .set_monitor_channel = rwnx_cfg80211_set_monitor_channel_,
     .probe_client = rwnx_cfg80211_probe_client,
 //    .mgmt_frame_register = rwnx_cfg80211_mgmt_frame_register,
     .set_wiphy_params = rwnx_cfg80211_set_wiphy_params,
@@ -8575,7 +8577,7 @@ static void __exit rwnx_mod_exit(void)
 module_init(rwnx_mod_init);
 module_exit(rwnx_mod_exit);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
-MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
+// MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
 #endif
 MODULE_FIRMWARE(RWNX_CONFIG_FW_NAME);
 
